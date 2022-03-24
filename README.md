@@ -1,1 +1,1 @@
-# gwasExplorer
+# R6-template

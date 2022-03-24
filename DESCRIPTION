@@ -1,0 +1,13 @@
+Package: gwasExplorer
+Type: Package
+Title: gwasExplorer
+Version: 1.0.1
+Date: 2022-033-23
+Author: Paul Shannon
+Maintainer: Paul Shannon<paul.thurmond.shannon@gmail.com>
+Description: score non-coding variants in GWAS loci to elucidate function
+Depends: R (>= 4.1.0), R6, AnnotationDbi
+Imports: org.Hs.eg.db, TxDb.Hsapiens.UCSC.hg19.knownGene, TxDb.Hsapiens.UCSC.hg38.knownGene
+License: MIT
+Encoding: UTF-8
+RoxygenNote: 7.1.2
