@@ -37,7 +37,7 @@ gwasExplorer = R6Class("gwasExplorer",
          #' @description
          #' Creates a new instance of this [R6][R6::R6Class] class.
          #' @param targetGene character
-         #' @param locusName character, from GWAS studies, often meta-analyses
+         #' @param locusName haracter, from GWAS studies, often meta-analyses
          #' @param tagSnp character
          #' @return a new instance of gwasExplorer
         initialize = function(targetGene, locusName, tagSnp){
@@ -109,22 +109,22 @@ gwasExplorer = R6Class("gwasExplorer",
         #' @param pval.threshold numeric retain only eQTLs as or more significant than this
         #' @return data.frame
         getEqtlsForGene = function(shoulder, eqtl.catalog.studyIDs, pval.threshold){
+           chrom <- private$tbl.chromLocs$chrom
+           start <- private$tbl.chromLocs$start.38 - shoulder
+           end   <- private$tbl.chromLocs$end.38 + shoulder
+
            tbl.eqtls.ampad <- private$etx$get.ampad.EQTLsForGene()
            tbl.eqtls.ampad <- subset(tbl.eqtls.ampad, pvalue <= pval.threshold)
-           chrom <- private$tbl.locs$chrom
-           start <- private$tbl.locs$start.hg38
-           end <- private$tbl.locs$end.hg38
-           start <- private$tbl.chromLocs$start.38
-           end   <- private$tbl.chromLocs$end.38
-           chrom <- private$tbl.chromLocs$chrom
-           tbl.gtex <- private$avx$geteQTLsByLocationAndStudyID(chrom, start-shoulder, end+shoulder,
+           tbl.eqtls.ampad <- subset(tbl.eqtls.ampad, hg38 >= start & hg38 <= end)
+
+           tbl.gtex <- private$avx$geteQTLsByLocationAndStudyID(chrom, start, end,
                                                                 studyIDs=eqtl.catalog.studyIDs,
                                                                 method="REST", simplify=TRUE)
            tbl.gtex <- subset(tbl.gtex, gene==private$targetGene & pvalue <= pval.threshold)
            tbl.gtex.locs <- private$etx$rsidToLoc(unique(tbl.gtex$rsid))
            tbl.gtex <- merge(tbl.gtex, tbl.gtex.locs, by="rsid")
            list(ampad=tbl.eqtls.ampad, gtex=tbl.gtex)
-        },
+           },
 
         #' @description build tms model
         #' @param tissueName character as used by GTEx
@@ -134,20 +134,23 @@ gwasExplorer = R6Class("gwasExplorer",
         #'
         #' @return data.frame
         trenaMultiScore = function(tissueName, shoulder, tbl.fimo, tbl.oc){
+           loc.chrom <- private$tbl.chromLocs$chrom
+           loc.start <- private$tbl.chromLocs$start.38 - shoulder
+           loc.end   <- private$tbl.chromLocs$end.38   + shoulder
            private$gls <- GwasLocusScores$new(private$tagSnp,
-                                              private$tbl.locs$chrom,
-                                              private$tbl.locs$start - shoulder,
-                                              private$tbl.locs$end + shoulder,
+                                              loc.chrom, loc.start, loc.end,
                                               tissue.name=tissueName,
                                               targetGene=private$targetGene)
            mtx.rna <- private$etx$get.rna.matrix(tissueName)
            dim(mtx.rna)
+           tbl.fimo.sub <- subset(tbl.fimo, start >= loc.start & end <= loc.end)
+           tbl.oc.sub <- subset(tbl.oc, start >= loc.start & end <= loc.end)
            private$tbl.tms <- private$gls$createTrenaMultiScoreTable(TrenaProjectAD(),
-                                                                     tbl.fimo,
-                                                                     tbl.oc,
+                                                                     tbl.fimo.sub,
+                                                                     tbl.oc.sub,
                                                                      mtx.rna)
            return(invisible(private$tbl.tms))
-           } # scoreTargetGeneInGtexTissue
+           } # trenaMultiScore
 
        ) # public
 

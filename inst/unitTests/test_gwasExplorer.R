@@ -4,6 +4,9 @@ library(gwasExplorer)
 runTests <- function()
 {
     test_ctor()
+    test_getChromLocs()
+    test_eqtlsForGene()
+    test_trenaMultiScore()
 
 } # runTests
 #----------------------------------------------------------------------------------------------------
@@ -48,7 +51,7 @@ test_eqtlsForGene <- function()
     x <- gwex$getEqtlsForGene(shoulder=0, eqtl.catalog.studyIDs=brain.tissue.study.ids,
                               pval.threshold=pval.max)
     checkEquals(names(x), c("ampad", "gtex"))
-    checkTrue(all(as.numeric(lapply(x, nrow)) > 5))   # ampad 48, gtex 8, probably due to sample size
+    checkTrue(all(as.numeric(lapply(x, nrow)) > 5))   # ampad 7, gtex 8, probably due to sample size
     tbl.ampad <- x$ampad
     tbl.gtex  <- x$gtex
 
@@ -77,6 +80,10 @@ test_trenaMultiScore <- function()
 
     tbl.tms <- gwex$trenaMultiScore("GTEx_V8.Brain_Hippocampus", shoulder=1000,
                                     tbl.fimo=tbl.fimo.ndufs2, tbl.oc=tbl.boca)
+    top.ranked <- table(subset(tbl.tms, abs(cor.all) > 0.5 & (chip | oc))$tf)
+
+    top.tfs <- unique(subset(tbl.tms, abs(cor.all) > 0.5 & (chip | oc))$tf)
+    checkTrue(all(c("ASCL1","EBF1","ZEB1","NFIA","SOX4","SOX21") %in% top.tfs))
 
 } # test_trenaMultiScore
 #----------------------------------------------------------------------------------------------------
