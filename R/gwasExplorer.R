@@ -25,7 +25,7 @@ gwasExplorer = R6Class("gwasExplorer",
                    tbl.linkage=NULL,
                    tbl.chromLocs=NULL,
                    tbl.eqtls.ampad=NULL,
-                   tbl.eqtls.general=NULL,
+                   tbl.eqtls.gtex=NULL,
                    tbl.tms=NULL,
                    etx=NULL,
                    avx=NULL,
@@ -122,8 +122,10 @@ gwasExplorer = R6Class("gwasExplorer",
                                                                 method="REST", simplify=TRUE)
            tbl.gtex <- subset(tbl.gtex, gene==private$targetGene & pvalue <= pval.threshold)
            tbl.gtex.locs <- private$etx$rsidToLoc(unique(tbl.gtex$rsid))
-           tbl.gtex <- merge(tbl.gtex, tbl.gtex.locs, by="rsid")
-           list(ampad=tbl.eqtls.ampad, gtex=tbl.gtex)
+           tbl.eqtls.gtex <- merge(tbl.gtex, tbl.gtex.locs, by="rsid")
+           private$tbl.eqtls.gtex  <- tbl.eqtls.gtex
+           private$tbl.eqtls.ampad <- tbl.eqtls.ampad
+           list(ampad=tbl.eqtls.ampad, gtex=tbl.eqtls.gtex)
            },
 
         #' @description build tms model
@@ -145,10 +147,28 @@ gwasExplorer = R6Class("gwasExplorer",
            dim(mtx.rna)
            tbl.fimo.sub <- subset(tbl.fimo, start >= loc.start & end <= loc.end)
            tbl.oc.sub <- subset(tbl.oc, start >= loc.start & end <= loc.end)
-           private$tbl.tms <- private$gls$createTrenaMultiScoreTable(TrenaProjectAD(),
-                                                                     tbl.fimo.sub,
-                                                                     tbl.oc.sub,
-                                                                     mtx.rna)
+           tbl.tms <- private$gls$createTrenaMultiScoreTable(TrenaProjectAD(),
+                                                             tbl.fimo.sub,
+                                                             tbl.oc.sub,
+                                                             mtx.rna)
+           gr.tms <- GRanges(tbl.tms)
+           if(is.data.frame(private$tbl.eqtls.ampad)){
+              gr.ampad <- with(private$tbl.eqtls.ampad, GRanges(seqnames=chrom, IRanges(hg38)))
+              tbl.ov <- as.data.frame(findOverlaps(gr.ampad, gr.tms))
+              ampad.eqtl <- rep(FALSE, nrow(tbl.tms))
+              if(nrow(tbl.ov) > 0)
+                  ampad.eqtl[unique(tbl.ov[,2])] <- TRUE
+              tbl.tms$ampad.eqtl <- ampad.eqtl
+              }
+           if(is.data.frame(private$tbl.eqtls.gtex)){
+              gr.gtex <- with(private$tbl.eqtls.gtex, GRanges(seqnames=paste0("chr", chrom), IRanges(hg38)))
+              tbl.ov <- as.data.frame(findOverlaps(gr.gtex, gr.tms))
+              gtex.eqtl <- rep(FALSE, nrow(tbl.tms))
+              if(nrow(tbl.ov) > 0)
+                  gtex.eqtl[unique(tbl.ov[,2])] <- TRUE
+              tbl.tms$gtex.eqtl <- gtex.eqtl
+              }
+           private$tbl.tms <- tbl.tms
            return(invisible(private$tbl.tms))
            } # trenaMultiScore
 

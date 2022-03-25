@@ -7,6 +7,7 @@ runTests <- function()
     test_getChromLocs()
     test_eqtlsForGene()
     test_trenaMultiScore()
+    test_trenaMultiScore_add.eQTLs()
 
 } # runTests
 #----------------------------------------------------------------------------------------------------
@@ -72,20 +73,83 @@ test_trenaMultiScore <- function()
 {
     message(sprintf("--- test_trenaMultiScore"))
 
+    shoulder <- 5000
     gwex <- gwasExplorer$new(targetGene="NDUFS2", locusName="ADAMTS4", tagSnp="rs4575098")
     tbl.fimo.ndufs2 <- get(load("~/github/TrenaProjectAD/prep/bigFimo/from-khaleesi/tbl.fimo.NDUFS2.RData"))
     data.dir <- "~/github/TrenaProjectAD/inst/extdata/genomicRegions"
     filename <- "boca-hg38-consensus-ATAC.RData"
     tbl.boca <- get(load(file.path(data.dir, filename)))
 
-    tbl.tms <- gwex$trenaMultiScore("GTEx_V8.Brain_Hippocampus", shoulder=1000,
+    tbl.tms <- gwex$trenaMultiScore("GTEx_V8.Brain_Hippocampus", shoulder=shoulder,
                                     tbl.fimo=tbl.fimo.ndufs2, tbl.oc=tbl.boca)
     top.ranked <- table(subset(tbl.tms, abs(cor.all) > 0.5 & (chip | oc))$tf)
 
     top.tfs <- unique(subset(tbl.tms, abs(cor.all) > 0.5 & (chip | oc))$tf)
     checkTrue(all(c("ASCL1","EBF1","ZEB1","NFIA","SOX4","SOX21") %in% top.tfs))
 
+    brain.tissue.study.ids <- "GTEx_V8.Brain_Hippocampus"
+
+    pval.max <- 1e-3
+    x <- gwex$getEqtlsForGene(shoulder=shoulder, eqtl.catalog.studyIDs=brain.tissue.study.ids,
+                              pval.threshold=pval.max)
+    tbl.ampad <- x$ampad
+    tbl.gtex  <- x$gtex
+
+    dim(tbl.ampad)
+    dim(tbl.gtex)
+    gr.ampad <- with(tbl.ampad, GRanges(seqnames=chrom, IRanges(hg38)))
+    gr.gtex <- with(tbl.gtex, GRanges(seqnames=paste0("chr", chrom), IRanges(hg38)))
+    gr.tms <- GRanges(tbl.tms[, 1:3])
+
+    tbl.ov.1 <- as.data.frame(findOverlaps(gr.ampad, gr.tms))
+    tbl.ov.2 <- as.data.frame(findOverlaps(gr.gtex, gr.tms))
+    dim(tbl.ov.1)
+    dim(tbl.ov.2)
+
+
 } # test_trenaMultiScore
+#----------------------------------------------------------------------------------------------------
+# historically, the tms table does not mark fimo regions for eQTLs.
+# but here, now, if eQTLs are called first, the will be added as TRUE/FALSE columns to the tms table
+test_trenaMultiScore_add.eQTLs <- function()
+{
+    message(sprintf("--- test_trenaMultiScore_add.eQTLs"))
+
+
+    shoulder <- 5000
+    gwex <- gwasExplorer$new(targetGene="NDUFS2", locusName="ADAMTS4", tagSnp="rs4575098")
+
+       #-----------------------------------------------
+       # find and save eQTLs, ampad and one gtex tissue
+       #-----------------------------------------------
+
+    brain.tissue.study.ids <- "GTEx_V8.Brain_Hippocampus"
+    pval.max <- 1e-3
+    x <- gwex$getEqtlsForGene(shoulder=shoulder, eqtl.catalog.studyIDs=brain.tissue.study.ids,
+                              pval.threshold=pval.max)
+
+    unique.variants <- unique(c(x$ampad$rsid, x$gtex$rsid))
+    length(unique.variants)   # 7
+
+       #---------------------------------------------------------
+       # now create the tms table. 2 eqtl columns should appear
+       #---------------------------------------------------------
+
+    tbl.fimo.ndufs2 <- get(load("~/github/TrenaProjectAD/prep/bigFimo/from-khaleesi/tbl.fimo.NDUFS2.RData"))
+    data.dir <- "~/github/TrenaProjectAD/inst/extdata/genomicRegions"
+    filename <- "boca-hg38-consensus-ATAC.RData"
+    tbl.boca <- get(load(file.path(data.dir, filename)))
+
+    tbl.tms <- gwex$trenaMultiScore("GTEx_V8.Brain_Hippocampus", shoulder=shoulder,
+                                    tbl.fimo=tbl.fimo.ndufs2, tbl.oc=tbl.boca)
+    checkTrue(all(c("ampad.eqtl", "gtex.eqtl") %in% colnames(tbl.tms)))
+
+    top.ranked <- table(subset(tbl.tms, abs(cor.all) > 0.5 & (chip | oc | ampad.eqtl | gtex.eqtl))$tf)
+
+    top.tfs <- names(top.ranked)
+    checkTrue(all(c("ASCL1","EBF1","ZEB1","NFIA","SOX4","SOX21") %in% top.tfs))
+
+} # test_trenaMultiScore_add.eQTLs
 #----------------------------------------------------------------------------------------------------
 if(!interactive())
     runTests()

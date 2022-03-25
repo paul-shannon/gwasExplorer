@@ -36,7 +36,7 @@ Creates a new instance of this [R6][R6::R6Class] class.
 \describe{
 \item{\code{targetGene}}{character}
 
-\item{\code{locusName}}{character, from GWAS studies, often meta-analyses}
+\item{\code{locusName}}{haracter, from GWAS studies, often meta-analyses}
 
 \item{\code{tagSnp}}{character}
 }

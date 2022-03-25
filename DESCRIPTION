@@ -1,8 +1,8 @@
 Package: gwasExplorer
 Type: Package
 Title: gwasExplorer
-Version: 1.0.3
-Date: 2022-033-25
+Version: 1.0.4
+Date: 2022-03-25
 Author: Paul Shannon
 Maintainer: Paul Shannon<paul.thurmond.shannon@gmail.com>
 Description: score non-coding variants in GWAS loci to elucidate function
