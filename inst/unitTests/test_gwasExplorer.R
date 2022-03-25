@@ -65,5 +65,20 @@ test_eqtlsForGene <- function()
 
 } # test_eqtlsForGene
 #----------------------------------------------------------------------------------------------------
+test_trenaMultiScore <- function()
+{
+    message(sprintf("--- test_trenaMultiScore"))
+
+    gwex <- gwasExplorer$new(targetGene="NDUFS2", locusName="ADAMTS4", tagSnp="rs4575098")
+    tbl.fimo.ndufs2 <- get(load("~/github/TrenaProjectAD/prep/bigFimo/from-khaleesi/tbl.fimo.NDUFS2.RData"))
+    data.dir <- "~/github/TrenaProjectAD/inst/extdata/genomicRegions"
+    filename <- "boca-hg38-consensus-ATAC.RData"
+    tbl.boca <- get(load(file.path(data.dir, filename)))
+
+    tbl.tms <- gwex$trenaMultiScore("GTEx_V8.Brain_Hippocampus", shoulder=1000,
+                                    tbl.fimo=tbl.fimo.ndufs2, tbl.oc=tbl.boca)
+
+} # test_trenaMultiScore
+#----------------------------------------------------------------------------------------------------
 if(!interactive())
     runTests()

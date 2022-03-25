@@ -18,6 +18,7 @@ score non-coding variants in GWAS loci to elucidate function
 \item \href{#method-getChromLocs}{\code{gwasExplorer$getChromLocs()}}
 \item \href{#method-getEQTLSummary}{\code{gwasExplorer$getEQTLSummary()}}
 \item \href{#method-getEqtlsForGene}{\code{gwasExplorer$getEqtlsForGene()}}
+\item \href{#method-trenaMultiScore}{\code{gwasExplorer$trenaMultiScore()}}
 \item \href{#method-clone}{\code{gwasExplorer$clone()}}
 }
 }
@@ -119,6 +120,32 @@ from all available sources, a table with both hg19 and hg38 coordinates
 \item{\code{eqtl.catalog.studyIDs}}{character vector,}
 
 \item{\code{pval.threshold}}{numeric retain only eQTLs as or more significant than this}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-trenaMultiScore"></a>}}
+\if{latex}{\out{\hypertarget{method-trenaMultiScore}{}}}
+\subsection{Method \code{trenaMultiScore()}}{
+build tms model
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$trenaMultiScore(tissueName, shoulder, tbl.fimo, tbl.oc)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{tissueName}}{character as used by GTEx}
+
+\item{\code{shoulder}}{numeric number of bytes up- and downstream from the largst transcript}
+
+\item{\code{tbl.fimo}}{data.frame, typically a very large & low threshold set of fimo scores}
+
+\item{\code{tbl.oc}}{data.frame, open chromatin from, e.g., ATAC-seq, as tissue- and cell-type specific as possible}
 }
 \if{html}{\out{</div>}}
 }

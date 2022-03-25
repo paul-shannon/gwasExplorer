@@ -9,6 +9,7 @@
 #' @import org.Hs.eg.db
 #' @import TxDb.Hsapiens.UCSC.hg38.knownGene
 #' @import TxDb.Hsapiens.UCSC.hg19.knownGene
+#' @import TrenaProjectAD
 #'
 #' @examples
 #'   gwex <- gwasExplorer$new(targetGene="NDUFS2", locusName="ADAMTS4", tagSnp="rs4575098")
@@ -25,8 +26,10 @@ gwasExplorer = R6Class("gwasExplorer",
                    tbl.chromLocs=NULL,
                    tbl.eqtls.ampad=NULL,
                    tbl.eqtls.general=NULL,
+                   tbl.tms=NULL,
                    etx=NULL,
-                   avx=NULL
+                   avx=NULL,
+                   gls=NULL
                    ),
 
     #--------------------------------------------------------------------------------
@@ -42,14 +45,14 @@ gwasExplorer = R6Class("gwasExplorer",
             private$locusName <- locusName
             private$tagSnp <- tagSnp
             private$tbl.linkage <- self$loadLinkageTable(tagSnp)
-            private$tbl.chromLocs <- self$getChromLocs(targetGene)
+            tbl.locs <- self$getChromLocs(targetGene)
+            private$tbl.chromLocs <- tbl.locs
             private$etx <-  EndophenotypeExplorer$new(targetGene, "hg19", vcf.project="AMPAD",
                                                       initialize.snpLocs=FALSE)
             private$avx <- ADvariantExplorer$new(targetGene,
-                                                 private$tbl.chromLocs$chrom,
-                                                 private$tbl.chromLocs$start,
-                                                 private$tbl.chromLocs$end)
-            #private$tbl.eqtls.ampad <- etx$get.ampad.EQTLsForGene()
+                                                 tbl.locs$chrom,
+                                                 tbl.locs$start,
+                                                 tbl.locs$end)
 
             },
         #------------------------------------------------------------
@@ -121,7 +124,31 @@ gwasExplorer = R6Class("gwasExplorer",
            tbl.gtex.locs <- private$etx$rsidToLoc(unique(tbl.gtex$rsid))
            tbl.gtex <- merge(tbl.gtex, tbl.gtex.locs, by="rsid")
            list(ampad=tbl.eqtls.ampad, gtex=tbl.gtex)
-           }
+        },
+
+        #' @description build tms model
+        #' @param tissueName character as used by GTEx
+        #' @param shoulder numeric number of bytes up- and downstream from the largst transcript
+        #' @param tbl.fimo data.frame, typically a very large & low threshold set of fimo scores
+        #' @param tbl.oc data.frame, open chromatin from, e.g., ATAC-seq, as tissue- and cell-type specific as possible
+        #'
+        #' @return data.frame
+        trenaMultiScore = function(tissueName, shoulder, tbl.fimo, tbl.oc){
+           private$gls <- GwasLocusScores$new(private$tagSnp,
+                                              private$tbl.locs$chrom,
+                                              private$tbl.locs$start - shoulder,
+                                              private$tbl.locs$end + shoulder,
+                                              tissue.name=tissueName,
+                                              targetGene=private$targetGene)
+           mtx.rna <- private$etx$get.rna.matrix(tissueName)
+           dim(mtx.rna)
+           private$tbl.tms <- private$gls$createTrenaMultiScoreTable(TrenaProjectAD(),
+                                                                     tbl.fimo,
+                                                                     tbl.oc,
+                                                                     mtx.rna)
+           return(invisible(private$tbl.tms))
+           } # scoreTargetGeneInGtexTissue
+
        ) # public
 
     ) # class
