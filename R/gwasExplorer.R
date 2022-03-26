@@ -96,7 +96,7 @@ gwasExplorer = R6Class("gwasExplorer",
            },
         #------------------------------------------------------------
         #' @description hg19 and hg38 chromosomal locations
-        #' @param geneSymbol
+        #' @param geneSymbol character, a HUGO human gene symbol
         #' @return data.frame
         getChromLocs = function(geneSymbol){
            suppressMessages({
@@ -193,7 +193,7 @@ gwasExplorer = R6Class("gwasExplorer",
             },
 
         #' @description getExpressionMatrix
-        #' @param tissueName character
+        #' @param code character, a short descriptive name, resolves to a file path
         #'
         #' @return data.frame
         getExpressionMatrix = function(code){
@@ -214,7 +214,7 @@ gwasExplorer = R6Class("gwasExplorer",
            tbl.trena
          },
 
-        #' @ description score broken motifs
+        #' @description score broken motifs
         #' @param max.pvalue numeric
         scoreBrokenMotifs = function(max.pvalue){
             x <- system.time(tbl.breaks <- private$gls$breakMotifsAtEQTLs(private$targetGene,

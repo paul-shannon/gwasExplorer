@@ -187,7 +187,7 @@ test_runTrena <- function()
     pval.max <- 1e-3
     x <- gwex$getEqtlsForGene(eqtl.catalog.studyIDs=brain.tissue.study.ids,
                               pval.threshold=pval.max)
-    tbl.scored <- gwex$scoreBrokenMotifs(max.pvalue=1e-3
+    tbl.scored <- gwex$scoreBrokenMotifs(max.pvalue=1e-3)
 
 } # test_runTrena
 #----------------------------------------------------------------------------------------------------
