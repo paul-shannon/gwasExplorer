@@ -22,11 +22,15 @@ gwasExplorer = R6Class("gwasExplorer",
                    entrezID=NULL,
                    locusName=NULL,
                    tagSnp=NULL,
+                   shoulder=NULL,
+                   tissueName=NULL,
                    tbl.linkage=NULL,
                    tbl.chromLocs=NULL,
                    tbl.eqtls.ampad=NULL,
                    tbl.eqtls.gtex=NULL,
                    tbl.tms=NULL,
+                   tbl.trena=NULL,
+                   tbl.trena.scored=NULL,
                    etx=NULL,
                    avx=NULL,
                    gls=NULL
@@ -39,11 +43,16 @@ gwasExplorer = R6Class("gwasExplorer",
          #' @param targetGene character
          #' @param locusName haracter, from GWAS studies, often meta-analyses
          #' @param tagSnp character
+         #' @param shoulder numeric number of bases up and downstream to consider in lookups
+         #' @param tissueName character  selects expression & variants
          #' @return a new instance of gwasExplorer
-        initialize = function(targetGene, locusName, tagSnp){
+        initialize = function(targetGene, locusName, tagSnp, shoulder, tissueName){
             private$targetGene <- targetGene
             private$locusName <- locusName
             private$tagSnp <- tagSnp
+            private$shoulder <- shoulder
+            private$tissueName <- tissueName
+
             private$tbl.linkage <- self$loadLinkageTable(tagSnp)
             tbl.locs <- self$getChromLocs(targetGene)
             private$tbl.chromLocs <- tbl.locs
@@ -53,6 +62,15 @@ gwasExplorer = R6Class("gwasExplorer",
                                                  tbl.locs$chrom,
                                                  tbl.locs$start,
                                                  tbl.locs$end)
+
+            loc.chrom <- private$tbl.chromLocs$chrom
+            loc.start <- private$tbl.chromLocs$start.38 - private$shoulder
+            loc.end   <- private$tbl.chromLocs$end.38   + private$shoulder
+
+            private$gls <- GwasLocusScores$new(private$tagSnp,
+                                              loc.chrom, loc.start, loc.end,
+                                              tissue.name=private$tissueName,
+                                              targetGene=private$targetGene)
 
             },
         #------------------------------------------------------------
@@ -104,14 +122,13 @@ gwasExplorer = R6Class("gwasExplorer",
 
         #------------------------------------------------------------
         #' @description from all available sources, a table with both hg19 and hg38 coordinates
-        #' @param shoulder numeric number of bytes up- and downstream from the largst transcript
         #' @param eqtl.catalog.studyIDs character vector,
         #' @param pval.threshold numeric retain only eQTLs as or more significant than this
         #' @return data.frame
-        getEqtlsForGene = function(shoulder, eqtl.catalog.studyIDs, pval.threshold){
+        getEqtlsForGene = function(eqtl.catalog.studyIDs, pval.threshold){
            chrom <- private$tbl.chromLocs$chrom
-           start <- private$tbl.chromLocs$start.38 - shoulder
-           end   <- private$tbl.chromLocs$end.38 + shoulder
+           start <- private$tbl.chromLocs$start.38 - private$shoulder
+           end   <- private$tbl.chromLocs$end.38 + private$shoulder
 
            tbl.eqtls.ampad <- private$etx$get.ampad.EQTLsForGene()
            tbl.eqtls.ampad <- subset(tbl.eqtls.ampad, pvalue <= pval.threshold)
@@ -135,16 +152,12 @@ gwasExplorer = R6Class("gwasExplorer",
         #' @param tbl.oc data.frame, open chromatin from, e.g., ATAC-seq, as tissue- and cell-type specific as possible
         #'
         #' @return data.frame
-        trenaMultiScore = function(tissueName, shoulder, tbl.fimo, tbl.oc){
-           loc.chrom <- private$tbl.chromLocs$chrom
-           loc.start <- private$tbl.chromLocs$start.38 - shoulder
-           loc.end   <- private$tbl.chromLocs$end.38   + shoulder
-           private$gls <- GwasLocusScores$new(private$tagSnp,
-                                              loc.chrom, loc.start, loc.end,
-                                              tissue.name=tissueName,
-                                              targetGene=private$targetGene)
+        trenaMultiScore = function(tissueName, tbl.fimo, tbl.oc){
            mtx.rna <- private$etx$get.rna.matrix(tissueName)
            dim(mtx.rna)
+           loc.chrom <- private$tbl.chromLocs$chrom
+           loc.start <- private$tbl.chromLocs$start.38 - private$shoulder
+           loc.end   <- private$tbl.chromLocs$end.38   + private$shoulder
            tbl.fimo.sub <- subset(tbl.fimo, start >= loc.start & end <= loc.end)
            tbl.oc.sub <- subset(tbl.oc, start >= loc.start & end <= loc.end)
            tbl.tms <- private$gls$createTrenaMultiScoreTable(TrenaProjectAD(),
@@ -170,7 +183,50 @@ gwasExplorer = R6Class("gwasExplorer",
               }
            private$tbl.tms <- tbl.tms
            return(invisible(private$tbl.tms))
-           } # trenaMultiScore
+           }, # trenaMultiScore
+
+        #' @description getExpressionMatrixCodes: short names (codes) and file paths
+        #'
+        #' @return list
+        getExpressionMatrixCodes = function(){
+            private$etx$get.rna.matrix.codes()
+            },
+
+        #' @description getExpressionMatrix
+        #' @param tissueName character
+        #'
+        #' @return data.frame
+        getExpressionMatrix = function(code){
+            mtx.rna <- private$etx$get.rna.matrix(code)
+            invisible(mtx.rna)
+            },
+
+        #' @description run trena
+        #' @param tfs character vector, one or more transcription factor gene symbols
+        #' @param mtx.rna matrix, gene expression of many genes across many conditions or samples
+        #' @param tbl.tms data.frame, tf binding sites, annotated and scored in many ways
+        #'
+        #' @return data.frame
+         runTrena = function(tfs, mtx.rna, tbl.tms){
+           tbl.trena <- private$gls$runTrena(tfs, mtx.rna, tbl.tms)
+           tbl.trena$rfNorm <- tbl.trena$rfScore / max(tbl.trena$rfScore)
+           private$tbl.trena <- tbl.trena
+           tbl.trena
+         },
+
+        #' @ description score broken motifs
+        #' @param max.pvalue numeric
+        scoreBrokenMotifs = function(max.pvalue){
+            x <- system.time(tbl.breaks <- private$gls$breakMotifsAtEQTLs(private$targetGene,
+                                                                          pvalue.cutoff=max.pvalue))
+            print(x[["elapsed"]])
+            tbl.trena.scored <- private$gls$scoreEQTLs(private$tbl.trena, tbl.breaks, private$tbl.eqtls.gtex)
+            tbl.trena <- private$tbl.trena
+            tbl.eqtls.gtex <- private$tbl.eqtls.gtex
+            private$tbl.trena.scored <- tbl.trena.scored
+            save(tbl.trena, tbl.breaks, tbl.eqtls.gtex, tbl.trena.scored, file="scoreEQTLs.RData")
+            tbl.trena.scored
+            }
 
        ) # public
 

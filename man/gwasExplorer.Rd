@@ -19,6 +19,10 @@ score non-coding variants in GWAS loci to elucidate function
 \item \href{#method-getEQTLSummary}{\code{gwasExplorer$getEQTLSummary()}}
 \item \href{#method-getEqtlsForGene}{\code{gwasExplorer$getEqtlsForGene()}}
 \item \href{#method-trenaMultiScore}{\code{gwasExplorer$trenaMultiScore()}}
+\item \href{#method-getExpressionMatrixCodes}{\code{gwasExplorer$getExpressionMatrixCodes()}}
+\item \href{#method-getExpressionMatrix}{\code{gwasExplorer$getExpressionMatrix()}}
+\item \href{#method-runTrena}{\code{gwasExplorer$runTrena()}}
+\item \href{#method-scoreBrokenMotifs}{\code{gwasExplorer$scoreBrokenMotifs()}}
 \item \href{#method-clone}{\code{gwasExplorer$clone()}}
 }
 }
@@ -28,7 +32,7 @@ score non-coding variants in GWAS loci to elucidate function
 \subsection{Method \code{new()}}{
 Creates a new instance of this [R6][R6::R6Class] class.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$new(targetGene, locusName, tagSnp)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$new(targetGene, locusName, tagSnp, shoulder, tissueName)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -39,6 +43,10 @@ Creates a new instance of this [R6][R6::R6Class] class.
 \item{\code{locusName}}{haracter, from GWAS studies, often meta-analyses}
 
 \item{\code{tagSnp}}{character}
+
+\item{\code{shoulder}}{numeric number of bases up and downstream to consider in lookups}
+
+\item{\code{tissueName}}{character  selects expression & variants}
 }
 \if{html}{\out{</div>}}
 }
@@ -109,14 +117,12 @@ return data.frame
 \subsection{Method \code{getEqtlsForGene()}}{
 from all available sources, a table with both hg19 and hg38 coordinates
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$getEqtlsForGene(shoulder, eqtl.catalog.studyIDs, pval.threshold)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$getEqtlsForGene(eqtl.catalog.studyIDs, pval.threshold)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{shoulder}}{numeric number of bytes up- and downstream from the largst transcript}
-
 \item{\code{eqtl.catalog.studyIDs}}{character vector,}
 
 \item{\code{pval.threshold}}{numeric retain only eQTLs as or more significant than this}
@@ -133,7 +139,7 @@ data.frame
 \subsection{Method \code{trenaMultiScore()}}{
 build tms model
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$trenaMultiScore(tissueName, shoulder, tbl.fimo, tbl.oc)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$trenaMultiScore(tissueName, tbl.fimo, tbl.oc)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -141,16 +147,89 @@ build tms model
 \describe{
 \item{\code{tissueName}}{character as used by GTEx}
 
-\item{\code{shoulder}}{numeric number of bytes up- and downstream from the largst transcript}
-
 \item{\code{tbl.fimo}}{data.frame, typically a very large & low threshold set of fimo scores}
 
 \item{\code{tbl.oc}}{data.frame, open chromatin from, e.g., ATAC-seq, as tissue- and cell-type specific as possible}
+
+\item{\code{shoulder}}{numeric number of bytes up- and downstream from the largst transcript}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getExpressionMatrixCodes"></a>}}
+\if{latex}{\out{\hypertarget{method-getExpressionMatrixCodes}{}}}
+\subsection{Method \code{getExpressionMatrixCodes()}}{
+getExpressionMatrixCodes: short names (codes) and file paths
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$getExpressionMatrixCodes()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+list
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getExpressionMatrix"></a>}}
+\if{latex}{\out{\hypertarget{method-getExpressionMatrix}{}}}
+\subsection{Method \code{getExpressionMatrix()}}{
+getExpressionMatrix
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$getExpressionMatrix(code)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{tissueName}}{character}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-runTrena"></a>}}
+\if{latex}{\out{\hypertarget{method-runTrena}{}}}
+\subsection{Method \code{runTrena()}}{
+run trena
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$runTrena(tfs, mtx.rna, tbl.tms)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{tfs}}{character vector, one or more transcription factor gene symbols}
+
+\item{\code{mtx.rna}}{matrix, gene expression of many genes across many conditions or samples}
+
+\item{\code{tbl.tms}}{data.frame, tf binding sites, annotated and scored in many ways}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-scoreBrokenMotifs"></a>}}
+\if{latex}{\out{\hypertarget{method-scoreBrokenMotifs}{}}}
+\subsection{Method \code{scoreBrokenMotifs()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$scoreBrokenMotifs(max.pvalue)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{max.pvalue}}{numeric}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
