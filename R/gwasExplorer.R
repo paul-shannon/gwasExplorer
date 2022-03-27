@@ -45,8 +45,9 @@ gwasExplorer = R6Class("gwasExplorer",
          #' @param tagSnp character
          #' @param shoulder numeric number of bases up and downstream to consider in lookups
          #' @param tissueName character  selects expression & variants
+         #' @parma tbl.prespecifiedRegion data.frame, default NA, use this instead of gene tx +/- shoulder
          #' @return a new instance of gwasExplorer
-        initialize = function(targetGene, locusName, tagSnp, shoulder, tissueName){
+        initialize = function(targetGene, locusName, tagSnp, shoulder, tissueName, tbl.prespecifiedRegion=NA){
             private$targetGene <- targetGene
             private$locusName <- locusName
             private$tagSnp <- tagSnp
@@ -55,6 +56,12 @@ gwasExplorer = R6Class("gwasExplorer",
 
             private$tbl.linkage <- self$loadLinkageTable(tagSnp)
             tbl.locs <- self$getChromLocs(targetGene)
+            if(!is.data.frame(tbl.prespecifiedRegion)){
+
+               }
+            if(is.data.frame(tbl.prespecifiedRegion)){
+               tbl.locs <- tbl.prespecifiedRegion
+               }
             private$tbl.chromLocs <- tbl.locs
             private$etx <-  EndophenotypeExplorer$new(targetGene, "hg19", vcf.project="AMPAD",
                                                       initialize.snpLocs=FALSE)
@@ -63,15 +70,25 @@ gwasExplorer = R6Class("gwasExplorer",
                                                  tbl.locs$start,
                                                  tbl.locs$end)
 
+            private$tbl.chromLocs$width.hg19 <- with(private$tbl.chromLocs, 1+end.hg19-start.hg19)
+            private$tbl.chromLocs$width.hg38 <- with(private$tbl.chromLocs, 1+end.hg38-start.hg38)
+
             loc.chrom <- private$tbl.chromLocs$chrom
-            loc.start <- private$tbl.chromLocs$start.38 - private$shoulder
-            loc.end   <- private$tbl.chromLocs$end.38   + private$shoulder
+            loc.start <- private$tbl.chromLocs$start.hg38 - private$shoulder
+            loc.end   <- private$tbl.chromLocs$end.hg38   + private$shoulder
+
 
             private$gls <- GwasLocusScores$new(private$tagSnp,
                                               loc.chrom, loc.start, loc.end,
-                                              tissue.name=private$tissueName,
+                                              #tissue.name=private$tissueName,
                                               targetGene=private$targetGene)
 
+            },
+        #------------------------------------------------------------
+        #' @description the regulatory region being studied
+        #' @return data.frame
+        getRegion = function(){
+            private$tbl.chromLocs
             },
         #------------------------------------------------------------
         #' @description from halporeg, a table with both hg19 and hg38 coordinates
@@ -107,10 +124,10 @@ gwasExplorer = R6Class("gwasExplorer",
                                    columns=c("TXCHROM", "TXSTART", "TXEND"))
              })
            data.frame(chrom=tbl.tx.hg19$TXCHROM[1],
-                      start.19=min(tbl.tx.hg19$TXSTART),
-                      end.19=min(tbl.tx.hg19$TXEND),
-                      start.38=min(tbl.tx.hg38$TXSTART),
-                      end.38=min(tbl.tx.hg38$TXEND),
+                      start.hg19=min(tbl.tx.hg19$TXSTART),
+                      end.hg19=min(tbl.tx.hg19$TXEND),
+                      start.hg38=min(tbl.tx.hg38$TXSTART),
+                      end.hg38=min(tbl.tx.hg38$TXEND),
                       stringsAsFactors=FALSE)
             },
         #------------------------------------------------------------
@@ -127,8 +144,8 @@ gwasExplorer = R6Class("gwasExplorer",
         #' @return data.frame
         getEqtlsForGene = function(eqtl.catalog.studyIDs, pval.threshold){
            chrom <- private$tbl.chromLocs$chrom
-           start <- private$tbl.chromLocs$start.38 - private$shoulder
-           end   <- private$tbl.chromLocs$end.38 + private$shoulder
+           start <- private$tbl.chromLocs$start.hg38 - private$shoulder
+           end   <- private$tbl.chromLocs$end.hg38 + private$shoulder
 
            tbl.eqtls.ampad <- private$etx$get.ampad.EQTLsForGene()
            tbl.eqtls.ampad <- subset(tbl.eqtls.ampad, pvalue <= pval.threshold)
@@ -136,10 +153,15 @@ gwasExplorer = R6Class("gwasExplorer",
 
            tbl.gtex <- private$avx$geteQTLsByLocationAndStudyID(chrom, start, end,
                                                                 studyIDs=eqtl.catalog.studyIDs,
-                                                                method="REST", simplify=TRUE)
+                                                                simplify=TRUE)
            tbl.gtex <- subset(tbl.gtex, gene==private$targetGene & pvalue <= pval.threshold)
-           tbl.gtex.locs <- private$etx$rsidToLoc(unique(tbl.gtex$rsid))
-           tbl.eqtls.gtex <- merge(tbl.gtex, tbl.gtex.locs, by="rsid")
+           if(nrow(tbl.gtex) > 0){
+              tbl.gtex.locs <- private$etx$rsidToLoc(unique(tbl.gtex$rsid))
+              tbl.eqtls.gtex <- merge(tbl.gtex, tbl.gtex.locs, by="rsid")
+              }
+           if(nrow(tbl.gtex) == 0){
+              tbl.eqtls.gtex <- data.frame()
+              }
            private$tbl.eqtls.gtex  <- tbl.eqtls.gtex
            private$tbl.eqtls.ampad <- tbl.eqtls.ampad
            list(ampad=tbl.eqtls.ampad, gtex=tbl.eqtls.gtex)
@@ -156,8 +178,8 @@ gwasExplorer = R6Class("gwasExplorer",
            mtx.rna <- private$etx$get.rna.matrix(tissueName)
            dim(mtx.rna)
            loc.chrom <- private$tbl.chromLocs$chrom
-           loc.start <- private$tbl.chromLocs$start.38 - private$shoulder
-           loc.end   <- private$tbl.chromLocs$end.38   + private$shoulder
+           loc.start <- private$tbl.chromLocs$start.hg38 - private$shoulder
+           loc.end   <- private$tbl.chromLocs$end.hg38   + private$shoulder
            tbl.fimo.sub <- subset(tbl.fimo, start >= loc.start & end <= loc.end)
            tbl.oc.sub <- subset(tbl.oc, start >= loc.start & end <= loc.end)
            tbl.tms <- private$gls$createTrenaMultiScoreTable(TrenaProjectAD(),
@@ -216,7 +238,9 @@ gwasExplorer = R6Class("gwasExplorer",
 
         #' @description score broken motifs
         #' @param max.pvalue numeric
-        scoreBrokenMotifs = function(max.pvalue){
+        #' @param tbl.eqtls data.frame  rsids used as input to motifbreakR
+        scoreBrokenMotifs = function(max.pvalue, tbl.eqtls){
+            private$gls$set.eqtls(tbl.eqtls)
             x <- system.time(tbl.breaks <- private$gls$breakMotifsAtEQTLs(private$targetGene,
                                                                           pvalue.cutoff=max.pvalue))
             print(x[["elapsed"]])

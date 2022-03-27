@@ -13,6 +13,7 @@ score non-coding variants in GWAS loci to elucidate function
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-new}{\code{gwasExplorer$new()}}
+\item \href{#method-getRegion}{\code{gwasExplorer$getRegion()}}
 \item \href{#method-getLinkageTable}{\code{gwasExplorer$getLinkageTable()}}
 \item \href{#method-loadLinkageTable}{\code{gwasExplorer$loadLinkageTable()}}
 \item \href{#method-getChromLocs}{\code{gwasExplorer$getChromLocs()}}
@@ -32,7 +33,14 @@ score non-coding variants in GWAS loci to elucidate function
 \subsection{Method \code{new()}}{
 Creates a new instance of this [R6][R6::R6Class] class.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$new(targetGene, locusName, tagSnp, shoulder, tissueName)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$new(
+  targetGene,
+  locusName,
+  tagSnp,
+  shoulder,
+  tissueName,
+  tbl.prespecifiedRegion = NA
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -52,6 +60,19 @@ Creates a new instance of this [R6][R6::R6Class] class.
 }
 \subsection{Returns}{
 a new instance of gwasExplorer
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getRegion"></a>}}
+\if{latex}{\out{\hypertarget{method-getRegion}{}}}
+\subsection{Method \code{getRegion()}}{
+the regulatory region being studied
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$getRegion()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+data.frame
 }
 }
 \if{html}{\out{<hr>}}
@@ -96,6 +117,13 @@ hg19 and hg38 chromosomal locations
 \if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$getChromLocs(geneSymbol)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{geneSymbol}}{character, a HUGO human gene symbol}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 data.frame
 }
@@ -184,7 +212,7 @@ getExpressionMatrix
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{tissueName}}{character}
+\item{\code{code}}{character, a short descriptive name, resolves to a file path}
 }
 \if{html}{\out{</div>}}
 }
@@ -220,14 +248,17 @@ data.frame
 \if{html}{\out{<a id="method-scoreBrokenMotifs"></a>}}
 \if{latex}{\out{\hypertarget{method-scoreBrokenMotifs}{}}}
 \subsection{Method \code{scoreBrokenMotifs()}}{
+score broken motifs
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$scoreBrokenMotifs(max.pvalue)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{gwasExplorer$scoreBrokenMotifs(max.pvalue, tbl.eqtls)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{max.pvalue}}{numeric}
+
+\item{\code{tbl.eqtls}}{data.frame  rsids used as input to motifbreakR}
 }
 \if{html}{\out{</div>}}
 }
