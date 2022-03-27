@@ -156,6 +156,7 @@ gwasExplorer = R6Class("gwasExplorer",
                                                                 simplify=TRUE)
            tbl.gtex <- subset(tbl.gtex, gene==private$targetGene & pvalue <= pval.threshold)
            if(nrow(tbl.gtex) > 0){
+              message(sprintf("--- calling etx$rsidToLoc on %d rsids", length(unique(tbl.gtex$rsid))))
               tbl.gtex.locs <- private$etx$rsidToLoc(unique(tbl.gtex$rsid))
               tbl.eqtls.gtex <- merge(tbl.gtex, tbl.gtex.locs, by="rsid")
               }
