@@ -6,6 +6,7 @@
 library(gwasExplorer)
 library(EndophenotypeExplorer)
 library(RUnit)
+library(GenomicRanges)
 #----------------------------------------------------------------------------------------------------
 eqtl.list <- get(load("eqtl.tbls.RData"))
 names(eqtl.list)
@@ -180,7 +181,7 @@ score.breakage <- function(tbl.trena, tbl.ampad.eqtls, tbl.breaks)
 #----------------------------------------------------------------------------------------------------
 main <- function()
 {
-    for(brain.tissue in brain.studies[9:13]){
+    for(brain.tissue in brain.studies){
         output.filename <- sprintf ('gwex.%s.%s.%s.RData', targetGene, brain.tissue,
                                     format (Sys.time(), "%a.%b.%d.%Y-%H:%M:%S"))
         printf("--- starting on %s", output.filename )
@@ -255,7 +256,9 @@ main <- function()
            tbl.breaks <- break.motifs(rsids.in.tfbs, motif.names)
            if(nrow(tbl.breaks) == 0){
                new.filename <- sub("gwex", "gwex-FAILED", output.filename)
-               save(eqtls, tbl.breaks, tbl.tms, tbl.tms.wt, file=new.filename)
+               tbl.trena <- data.frame()
+               save(short.tissue.name, brain.tissue, eqtls, tbl.breaks, tbl.tms, tbl.tms.wt,
+                    tbl.trena, file=new.filename)
                next;
                }
            new.order <- order(abs(tbl.breaks$pctDelta), decreasing=TRUE)
@@ -284,7 +287,7 @@ main <- function()
         printf("------- results for %s", brain.tissue)
         printf("------- tbl.scored, sum top 10: %f", sum(head(tbl.scored$breakage.score, n=10)))
         printf("--- saving to %s", output.filename)
-        save(mtx.rna, eqtls, tbl.tms, tbl.trena, tbl.scored, file=output.filename)
+        save(short.tissue.name, brain.tissue, eqtls, tbl.tms, tbl.trena, tbl.breaks, tbl.scored, file=output.filename)
         } # for brain.tissue
 
 } # main
@@ -349,4 +352,100 @@ viz <- function()
       } # for TF
 
 } # viz
+#----------------------------------------------------------------------------------------------------
+# motifBreak.score <- with(tbl.tf, abs(pctDelta) * 100)
+#       eqtl.score <- with(tbl.tf, -log10(gtex.eqtl.pval)* abs(gtex.eqtl.beta) * 100)
+#     trena.score <- with(tbl.tf, (abs(betaLasso) * 100) + (rfNorm * 10))
+#      tfbs.score <- 1/tfbs.count
+# score <- trena.score * eqtl.score * motifBreak.score * tfbs.score
+review <- function()
+{
+  files <- list.files(".", pattern="gwex.EGFR.*RData")
+  files
+  targetGene <- "EGFR"
+
+  if(exists("tbl.scored")) rm(tbl.scored)
+
+  for(file in files){
+      print(load(file))
+      if(exists("tbl.scored")){
+         printf("%s: %f", file, sum(tbl.scored$breakage.score[1:10]))
+         rm(tbl.scored)
+         } # if tbl.scored
+      } # for file
+
+   file <- files[5]
+   file
+   print(load(file))
+   breaks.coi <- c("chrom", "start", "end", "SNP_id", "pctRef", "pctAlt", "pctDelta", "geneSymbol")
+   nrow(tbl.breaks)
+   tbls <- list()
+   tfs <- head(tbl.scored$gene, n=10)
+   for(TF in tfs){
+          # just the tfbs for current TF
+      tbl.tms.TF <- subset(tbl.tms, tf==TF & ampad.eqtl)
+      if(nrow(tbl.breaks) == 0) next;
+          # just the breaks for this TF and a meaninful change in binding
+          # get the whole table width in case we want to look at the values
+      tbl.breaks.TF <- subset(tbl.breaks, geneSymbol==TF & abs(pctDelta) > 0.05) [, breaks.coi]
+          # just the breaks which fall within previously selected tfbs
+      if(nrow(tbl.breaks.TF) == 0)
+          next;
+
+      gr.tms <- GRanges(tbl.tms.TF)
+      gr.breaks <- GRanges(tbl.breaks.TF)
+      tbl.ov <- as.data.frame(findOverlaps(gr.breaks, gr.tms))
+      if(nrow(tbl.ov) == 0)
+          next;
+      breaking.snps <- unique(tbl.breaks.TF$SNP_id[tbl.ov[, "queryHits"]])
+          # how many TFBS for this TF?
+      tfbs.count <- subset(tbl.trena, gene==TF)$tfbs
+      if(nrow(tbl.tms.TF) == 0) next;
+      if(nrow(tbl.breaks.TF) == 0) next;
+      motifBreak.score <- with(tbl.breaks.TF, sum(abs(pctDelta)) * 100)
+         # the eqtl score is the average -log10(pval) across all breaking snps
+         # might want to sum these instead
+      tbl.eqtl.TF <- subset(eqtls$ampad, rsid %in% breaking.snps & study=="ampad-rosmap")
+      eqtl.score <-  sum(-log10(tbl.eqtl.TF$pvalue))
+      trena.score <- with(subset(tbl.trena, gene==TF), (abs(betaLasso) * 100) + (rfNorm * 10))
+      tfbs.count <- subset(tbl.trena, gene==TF)$tfbs
+      score.mult <- max(trena.score * eqtl.score * motifBreak.score) # * tfbs.score)
+      score.sum <- max(trena.score + eqtl.score + motifBreak.score) # * tfbs.score)
+      #printf("%10s: %6.1f %6.1f %6.1f %d  %d", TF,
+      #       trena.score, eqtl.score, motifBreak.score,
+      #       as.integer(score.sum), as.integer(score.mult))
+      #browser()
+      tbl <- data.frame(targetGene=targetGene,
+                        tf=TF,
+                        tissue=short.tissue.name,
+                        trena=trena.score,
+                        tfbs.count=tfbs.count,
+                        eqtl=eqtl.score,
+                        motifBreak=motifBreak.score,
+                        total=as.integer(score.mult),
+                        rsids=paste(breaking.snps, collapse=" "),
+                        stringsAsFactors=FALSE)
+       tbls[[TF]] <- unique(tbl)
+      } # for TF
+
+    tbl.all <- do.call(rbind, tbls)
+    new.order <- order(tbl.all$total, decreasing=TRUE)
+    tbl.all <- tbl.all[new.order,]
+    rownames(tbl.all) <- NULL
+
+    tbl.all
+
+     # now inspect
+   TF <- "POU3F2"
+   tbl.tms.TF <- subset(tbl.tms, tf==TF & ampad.eqtl)
+   dim(tbl.tms.TF)
+   track <- DataFrameAnnotationTrack(TF, tbl.tms.TF, color="random", trackHeight=25)
+   displayTrack(igv, track)
+
+   tbl.breaks.TF <- subset(tbl.breaks, geneSymbol==TF & abs(pctDelta) > 0.05) [, breaks.coi]
+   track <- DataFrameQuantitativeTrack(sprintf("%s.rsids", TF), tbl.breaks.TF[, c(1,2,3,7)],
+                                       color="brown", autoscale=FALSE, min=-0.2, max=0.2)
+   displayTrack(igv, track)
+
+} # review
 #----------------------------------------------------------------------------------------------------
