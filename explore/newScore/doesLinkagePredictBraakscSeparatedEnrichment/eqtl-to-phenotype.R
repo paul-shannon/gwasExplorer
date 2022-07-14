@@ -10,7 +10,7 @@ if(!exists("etx")){
                             #        7532         3774            4
    }
 if(!exists("tbl.gwascat.ad")){
-   data.dir <- system.file(package="igvR", "extdata", "gwas")
+   data.dir <- data.dir <- "~/github/TrenaProjectAD/inst/extdata/gwasLoci"
    file.exists(data.dir)
    file <- "alzheimerSubsetOfGWASCatatalog-29apr2022.RData"
    full.path <- file.path(data.dir, file)
