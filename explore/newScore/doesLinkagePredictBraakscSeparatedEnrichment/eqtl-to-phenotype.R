@@ -114,40 +114,19 @@ rosmap.ad.ctl.separation <- function(rsid)
 #----------------------------------------------------------------------------------------------------
 test_rosmap.ad.ctl.separation <- function()
 {
-   targetGene <- "MS4A4A"
-   if(!exists("etx"))
-       etx <- EndophenotypeExplorer$new(targetGene, "hg19", vcf.project="AMPAD")
+   targetGene <- "NDUFS2"
+   etx <- EndophenotypeExplorer$new(targetGene, "hg19", vcf.project="AMPAD")
 
-   RSID <- "rs9916042"
+   RSID <- "rs1136207"  # predict rosmap extreme braak score
    x <- rosmap.ad.ctl.separation(RSID)
    checkEquals((names(x)), c("pval.t", "pval.fisher", "tbl.geno", "tbl.pt", "mtx.geno", "mtx.geno.study", "pt.ad", "pt.ctl"))
+   checkEqualsNumeric(x$pval.t,  0.001985018, tol=1e-5)
+   checkEqualsNumeric(x$pval.fisher,  0.04005, tol=1e-3)
 
-   RSID <- "rs1582763"  # very strong in mayo, almost nothing in rosmap
-   checkEquals(sort(names(x)), c("mtx.geno", "mtx.geno.study", "pt.ad", "pt.ctl", "pval",
-                                 "tbl.geno", "tbl.pt"))
-   #checkEqualsNumeric(x$pval, 0.82851, tol=1e-5)
-   checkEqualsNumeric(x$pval, 0.54275, tol=1e-5)
-   checkEquals(as.integer(rowSums(x$tbl.geno)), c(303, 85))
-
-   rsid <- "rs199636781"
-   x <- rosmap.ad.ctl.separation(rsid)
-   checkTrue(is.na(x))
-
-   rsid <- "rs4575098"
-   x <- rosmap.ad.ctl.separation(rsid)
-   checkEqualsNumeric(x$pval, 0.0058, tol=2e5)
-
-   rsid <- "rs1136207"
-   x <- rosmap.ad.ctl.separation(rsid)
-   checkEqualsNumeric(x$pval, 0.0400, tol=1e-2)
-
-   rsid <- "rs528321"
-   x <- rosmap.ad.ctl.separation(rsid)
-   checkEqualsNumeric(x$pval, 0.0820, tol=1e-2)
-
-   rsid <- "rs352680"
-   x <- rosmap.ad.ctl.separation(rsid)
-   checkEqualsNumeric(x$pval, 0.666, tol=1e-2)
+   RSID <- "rs113582945"   # distant and unrelated, should have no signficance, 1.6M upstream, randomly chosen
+   x <- rosmap.ad.ctl.separation(RSID)
+   checkTrue(x$pval.fisher > 0.20)
+   checkTrue(x$pval.t > 0.95)
 
 } # test_rosmap.ad.ctl.separation
 #----------------------------------------------------------------------------------------------------
